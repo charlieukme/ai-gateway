@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Gateway - Chat</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>AI Assistant</h2>
+            <div class="user-info">
+                <span class="username" id="username">Loading...</span>
+                <!-- Fixed Admin Link -->
+                <a href="#" id="adminLink" onclick="openAdminWindow(); return false;" style="color: #ffd700; margin-right: 15px; display: none;">👑 Admin</a>
+                <a href="/login" class="logout-btn" onclick="localStorage.clear()">Logout</a>
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message ai">
+                <div class="message-content">
+                    👋 Hello! I'm your AI assistant. Ask me anything!
+                </div>
+                <div class="message-time">Just now</div>
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <input type="text" id="userInput" placeholder="Type your message..." autocomplete="off">
+            <button id="sendButton">Send</button>
+        </div>
+        
+        <div class="rate-limit" id="rateLimit">
+            ⚡ Loading limits...
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // SESSION TIMEOUT WARNING
+        // ============================================
+        let sessionTimeout;
+        let warningTimeout;
+
+        function resetSessionTimer() {
+            clearTimeout(sessionTimeout);
+            clearTimeout(warningTimeout);
+            
+            warningTimeout = setTimeout(() => {
+                if (confirm('⚠️ Your session will expire in 5 minutes due to inactivity. Stay logged in?')) {
+                    resetSessionTimer();
+                } else {
+                    logout();
+                }
+            }, 25 * 60 * 1000);
+            
+            sessionTimeout = setTimeout(() => {
+                alert('Session expired. Please login again.');
+                logout();
+            }, 30 * 60 * 1000);
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login';
+        }
+
+        ['click', 'keypress', 'scroll'].forEach(event => {
+            document.addEventListener(event, resetSessionTimer);
+        });
+
+        resetSessionTimer();
+
+        // ============================================
+        // CHAT FUNCTIONALITY
+        // ============================================
+        const chatMessages = document.getElementById('chatMessages');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const rateLimit = document.getElementById('rateLimit');
+        
+        // Check if user is logged in
+        const username = localStorage.getItem('username');
+        const API_KEY = localStorage.getItem('api_key');
+        const token = localStorage.getItem('access_token');
+        const isAdmin = localStorage.getItem('is_admin');
+
+        if (!username || !API_KEY || !token) {
+            window.location.href = '/login';
+        }
+        
+        document.getElementById('username').textContent = username;
+        
+        // ============================================
+        // SHOW ADMIN LINK IF USER IS ADMIN (FIXED)
+        // ============================================
+        if (isAdmin === 'true') {
+            document.getElementById('adminLink').style.display = 'inline';
+        }
+
+        // ============================================
+        // OPEN ADMIN WINDOW WITH TOKEN (FIXED)
+        // ============================================
+        window.openAdminWindow = function() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                alert('Please login first');
+                window.location.href = '/login';
+                return;
+            }
+            
+            // Open a new window and pass the token via URL parameter
+            const adminUrl = `/admin?token=${encodeURIComponent(token)}`;
+            window.open(adminUrl, '_blank');
+        };
+
+        // Check if token is valid
+        function isTokenValid() {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                return Date.now() < payload.exp * 1000;
+            } catch {
+                return false;
+            }
+        }
+
+        if (!isTokenValid()) {
+            alert('Session expired. Please login again.');
+            localStorage.clear();
+            window.location.href = '/login';
+        }
+        
+        function addMessage(text, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = text;
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = new Date().toLocaleTimeString();
+            
+            messageDiv.appendChild(contentDiv);
+            messageDiv.appendChild(timeDiv);
+            chatMessages.appendChild(messageDiv);
+            
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function showTypingIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'message ai';
+            indicator.id = 'typingIndicator';
+            
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.innerHTML = '<span></span><span></span><span></span>';
+            
+            indicator.appendChild(typingDiv);
+            chatMessages.appendChild(indicator);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+        
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+            
+            if (!isTokenValid()) {
+                alert('Session expired. Please login again.');
+                logout();
+                return;
+            }
+            
+            addMessage(message, true);
+            userInput.value = '';
+            showTypingIndicator();
+            
+            try {
+                const response = await fetch(`/chat?prompt=${encodeURIComponent(message)}&api_key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.status === 401) {
+                    localStorage.clear();
+                    window.location.href = '/login';
+                    return;
+                }
+                
+                if (response.status === 429) {
+                    const error = await response.json();
+                    removeTypingIndicator();
+                    addMessage(`⚠️ ${error.detail}`);
+                    return;
+                }
+                
+                if (!response.ok) {
+                    removeTypingIndicator();
+                    addMessage('Sorry, something went wrong. Please try again.');
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                removeTypingIndicator();
+                addMessage(data.response);
+                
+                if (data.limits) {
+                    rateLimit.textContent = `⚡ ${data.limits.daily_remaining} daily / ${data.limits.minute_remaining} min remaining`;
+                }
+                
+            } catch (error) {
+                removeTypingIndicator();
+                addMessage('Sorry, something went wrong. Please try again.');
+                console.error(error);
+            }
+        }
+        
+        sendButton.addEventListener('click', sendMessage);
+        
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

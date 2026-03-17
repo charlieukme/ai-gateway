@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Gateway - Sign Up</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="auth-box">
+            <div class="logo">
+                <h1>🚀 AI GATEWAY</h1>
+                <p>Start Your AI Journey</p>
+            </div>
+            
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+            <div id="successMessage" class="error-message" style="display: none; background: rgba(0, 255, 157, 0.1); border-color: #00ff9d; color: #00ff9d;"></div>
+            
+            <form id="signupForm">
+                <div class="form-group">
+                    <label>👤 Username</label>
+                    <input type="text" id="username" placeholder="johndoe" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>📧 Email</label>
+                    <input type="email" id="email" placeholder="you@example.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>🔑 Password</label>
+                    <div style="position: relative;">
+                        <input type="password" id="password" placeholder="••••••••" required style="width: 100%; padding-right: 40px;">
+                        <i class="fa-regular fa-eye" id="togglePassword" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>🔐 Confirm Password</label>
+                    <input type="password" id="confirmPassword" placeholder="••••••••" required>
+                </div>
+                
+                <button type="submit" class="btn" id="signupBtn">✨ CREATE ACCOUNT</button>
+            </form>
+            
+            <div class="auth-footer">
+                Already have an account?
+                <a href="/login">Login here</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle password visibility
+        const togglePassword = document.getElementById('togglePassword');
+        const password = document.getElementById('password');
+        
+        togglePassword.addEventListener('click', function() {
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            this.classList.toggle('fa-eye');
+            this.classList.toggle('fa-eye-slash');
+        });
+        
+        // Password confirmation check
+        const confirmPassword = document.getElementById('confirmPassword');
+        confirmPassword.addEventListener('input', function() {
+            if (this.value !== password.value) {
+                this.style.borderColor = '#ff4d4d';
+            } else {
+                this.style.borderColor = '';
+            }
+        });
+        
+        // Signup form submission
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const signupBtn = document.getElementById('signupBtn');
+            const errorDiv = document.getElementById('errorMessage');
+            const successDiv = document.getElementById('successMessage');
+            
+            // Check password match
+            if (password !== confirm) {
+                errorDiv.textContent = 'Passwords do not match';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            signupBtn.disabled = true;
+            signupBtn.textContent = '🔄 CREATING...';
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('/signup-api', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    successDiv.textContent = '✅ Account created! Redirecting to login...';
+                    successDiv.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                } else {
+                    errorDiv.textContent = data.detail || 'Registration failed';
+                    errorDiv.style.display = 'block';
+                    signupBtn.disabled = false;
+                    signupBtn.textContent = '✨ CREATE ACCOUNT';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Connection error. Please try again.';
+                errorDiv.style.display = 'block';
+                signupBtn.disabled = false;
+                signupBtn.textContent = '✨ CREATE ACCOUNT';
+            }
+        });
+    </script>
+</body>
+</html>

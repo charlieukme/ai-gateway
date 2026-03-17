@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Gateway - Login</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="auth-box">
+            <div class="logo">
+                <h1>🔐 AI GATEWAY</h1>
+                <p>Secure Access to Advanced AI</p>
+            </div>
+            
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>📧 Email</label>
+                    <input type="email" id="email" placeholder="you@example.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>🔑 Password</label>
+                    <div style="position: relative;">
+                        <input type="password" id="password" placeholder="••••••••" required style="width: 100%; padding-right: 40px;">
+                        <i class="fa-regular fa-eye" id="togglePassword" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn" id="loginBtn">🔓 LOGIN</button>
+            </form>
+            
+            <div class="auth-footer">
+                New to AI Gateway?
+                <a href="/signup">Create Account</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle password visibility
+        const togglePassword = document.getElementById('togglePassword');
+        const password = document.getElementById('password');
+        
+        togglePassword.addEventListener('click', function() {
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            this.classList.toggle('fa-eye');
+            this.classList.toggle('fa-eye-slash');
+        });
+        
+        // Login form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const errorDiv = document.getElementById('errorMessage');
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = '🔄 LOGGING IN...';
+            errorDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('/login-api', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('username', data.username);
+                    localStorage.setItem('api_key', data.api_key);
+                    localStorage.setItem('is_admin', data.is_admin);
+                    
+                    window.location.href = '/chat';
+                } else {
+                    errorDiv.textContent = data.message || 'Invalid email or password';
+                    errorDiv.style.display = 'block';
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = '🔓 LOGIN';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Connection error. Please try again.';
+                errorDiv.style.display = 'block';
+                loginBtn.disabled = false;
+                loginBtn.textContent = '🔓 LOGIN';
+            }
+        });
+    </script>
+</body>
+</html>
