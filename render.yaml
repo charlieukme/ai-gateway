@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: ai-gateway
+    runtime: python
+    buildCommand: |
+      curl https://sh.rustup.rs -sSf | sh -s -- -y
+      export PATH="$HOME/.cargo/bin:$PATH"
+      pip install -r requirements.txt
+    startCommand: uvicorn main:apgit add requirements.txt render.yamlp --host 0.0.0.0 --port $PORT
