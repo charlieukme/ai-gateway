@@ -44,8 +44,8 @@ app.add_middleware(
 )
 
 # Static files and templates
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="app_static"), name="static")
+templates = Jinja2Templates(directory="app_templates")
 
 # AI Service
 groq_api_key = os.getenv("GROQ_API_KEY")
