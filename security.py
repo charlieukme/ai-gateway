@@ -45,7 +45,8 @@ class InputValidator:
 
 class IPBlacklister:
     def __init__(self):
-        self.max_failures = 5
+        self.max_failures = 10           # Increased from 5 to 10
+        self.blacklist_duration = 1      # Reduced from 24 hours to 1 hour
         self.temp_blacklist = {}
         self.permanent_blacklist = set()
     
