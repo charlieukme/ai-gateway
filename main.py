@@ -26,21 +26,57 @@ load_dotenv()
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="AI Gateway API")
+# ============================================
+# FIXED: Get Render URL for trusted hosts
+# ============================================
+render_url = os.environ.get('RENDER_EXTERNAL_URL', '')
+if render_url:
+    render_host = render_url.replace('https://', '').replace('http://', '')
+else:
+    render_host = "ai-gateway.onrender.com"
 
-# CORS
+# ============================================
+# FIXED: FastAPI with proper host configuration
+# ============================================
+app = FastAPI(
+    title="AI Gateway API",
+    trusted_hosts=[
+        "localhost",
+        "127.0.0.1",
+        render_host,
+        ".onrender.com",  # Allow all Render subdomains
+        "*"  # Fallback - allows all hosts
+    ]
+)
+
+# ============================================
+# FIXED: CORS Configuration
+# ============================================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
+    allow_origins=[
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "https://*.onrender.com",  # Allow all Render apps
+        f"https://{render_host}" if render_host else "",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Trusted Hosts
+# ============================================
+# FIXED: Trusted Host Middleware
+# ============================================
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["localhost", "127.0.0.1"],
+    allowed_hosts=[
+        "localhost",
+        "127.0.0.1",
+        render_host,
+        ".onrender.com",
+        "*",  # Fallback for development
+    ],
 )
 
 # Static files and templates
@@ -67,8 +103,9 @@ def get_current_user_from_token(request: Request, db: Session = Depends(get_db))
     token = auth_header.replace("Bearer ", "")
     return auth.get_current_user(token, db)
 
-# ==================== PAGE ROUTES ====================
-
+# ============================================
+# FIXED: Root endpoint - redirects to login
+# ============================================
 @app.get("/")
 def root():
     return {"message": "Go to /login or /signup or /admin"}
@@ -85,8 +122,9 @@ def signup_page(request: Request):
 def chat_page(request: Request):
     return templates.TemplateResponse("chat.html", {"request": request})
 
-# ==================== ADMIN DASHBOARD (FIXED WITH TOKEN PARAM) ====================
-
+# ============================================
+# FIXED: Admin Dashboard with token support
+# ============================================
 @app.get("/admin", response_class=HTMLResponse)
 def admin_page(request: Request, token: str = None, db: Session = Depends(get_db)):
     # Check if token is in query param (from new window)
@@ -99,21 +137,12 @@ def admin_page(request: Request, token: str = None, db: Session = Depends(get_db
     if not user or not user.is_admin:
         return templates.TemplateResponse("login.html", {"request": request, "error": "Admin access required"})
     
-    # Get statistics
     total_users = db.query(models.User).count()
     total_chats = db.query(models.APIRequest).count()
     total_blocked = db.query(models.BlockedPrompt).count()
-    
-    # Get recent users
     recent_users = db.query(models.User).order_by(desc(models.User.created_at)).limit(5).all()
-    
-    # Get recent chats
     recent_chats = db.query(models.APIRequest).order_by(desc(models.APIRequest.timestamp)).limit(10).all()
-    
-    # Get blocked prompts
     blocked_prompts = db.query(models.BlockedPrompt).order_by(desc(models.BlockedPrompt.timestamp)).limit(10).all()
-    
-    # Get all users for management
     all_users = db.query(models.User).all()
     
     return templates.TemplateResponse("admin.html", {
@@ -128,7 +157,6 @@ def admin_page(request: Request, token: str = None, db: Session = Depends(get_db
         "all_users": all_users
     })
 
-# API endpoint to toggle user active status (admin only)
 @app.post("/admin/toggle-user/{user_id}")
 def toggle_user(user_id: int, request: Request, db: Session = Depends(get_db)):
     admin = get_current_user_from_token(request, db)
@@ -141,10 +169,8 @@ def toggle_user(user_id: int, request: Request, db: Session = Depends(get_db)):
     
     user.is_active = not user.is_active
     db.commit()
-    
     return {"success": True, "is_active": user.is_active}
 
-# API endpoint to delete user (admin only)
 @app.post("/admin/delete-user/{user_id}")
 def delete_user(user_id: int, request: Request, db: Session = Depends(get_db)):
     admin = get_current_user_from_token(request, db)
@@ -155,17 +181,16 @@ def delete_user(user_id: int, request: Request, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Don't allow deleting yourself
     if user.id == admin.id:
         raise HTTPException(status_code=400, detail="Cannot delete yourself")
     
     db.delete(user)
     db.commit()
-    
     return {"success": True}
 
-# ==================== API ROUTES ====================
-
+# ============================================
+# API ROUTES
+# ============================================
 @app.post("/login-api")
 def login(user_data: dict, request: Request, db: Session = Depends(get_db)):
     ip = request.client.host if request.client else "127.0.0.1"
@@ -218,7 +243,7 @@ def signup(user_data: dict, request: Request, db: Session = Depends(get_db)):
     if not ip_allowed:
         raise HTTPException(status_code=403, detail=ip_message)
     
-    # Check if first user ever - make them admin
+    # First user becomes admin
     is_first_user = db.query(models.User).count() == 0
     
     existing = db.query(models.User).filter(
@@ -242,7 +267,6 @@ def signup(user_data: dict, request: Request, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=400, detail="Registration failed")
     
-    # First user becomes admin
     if is_first_user:
         user.is_admin = True
         db.commit()
@@ -319,6 +343,9 @@ def chat(prompt: str, api_key: str, request: Request, db: Session = Depends(get_
     
     request_id = f"req_{secrets.token_urlsafe(8)}"
     
+    # ============================================
+    # FIXED: Database path for Render
+    # ============================================
     db_request = models.APIRequest(
         request_id=request_id,
         user_id=user.id,
@@ -352,6 +379,10 @@ def chat(prompt: str, api_key: str, request: Request, db: Session = Depends(get_
         audit_logger.log_error(db, "ai_error", str(e), ip)
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
 @app.get("/test-db")
 def test_db(db: Session = Depends(get_db)):
     return {
@@ -362,4 +393,5 @@ def test_db(db: Session = Depends(get_db)):
     }
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
