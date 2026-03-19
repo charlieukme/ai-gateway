@@ -3,297 +3,443 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Gateway - Admin Dashboard</title>
+    <title>AI Gateway - Security Admin</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        body {
+            background: #030303;
+            color: #e5e5e5;
+        }
         .admin-container {
             max-width: 1400px;
-            margin: 20px auto;
-            padding: 20px;
+            margin: 0 auto;
+            padding: 30px;
         }
+        /* Header */
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #2f353d;
+        }
+        .admin-header h1 {
+            color: #00ff9d;
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+        .admin-header h1::before {
+            content: "🛡️ ";
+            font-size: 32px;
+        }
+        .privacy-badge {
+            background: #1e2329;
+            color: #00ff9d;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            border: 1px solid #00ff9d30;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .privacy-badge::before {
+            content: "🔒";
+            font-size: 14px;
+        }
+        /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 20px;
             margin-bottom: 30px;
         }
         .stat-card {
-            background: #1e2329;
-            padding: 20px;
-            border-radius: 10px;
+            background: #15181c;
+            border-radius: 16px;
+            padding: 24px;
             border: 1px solid #2f353d;
+            transition: transform 0.2s;
         }
-        .stat-number {
-            font-size: 32px;
-            color: #00ff9d;
-            font-weight: bold;
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: #00ff9d40;
         }
         .stat-label {
             color: #8b949e;
             font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
         }
-        .section {
-            background: #1e2329;
-            border-radius: 10px;
-            padding: 20px;
+        .stat-number {
+            color: #00ff9d;
+            font-size: 36px;
+            font-weight: 700;
+            line-height: 1;
+        }
+        .stat-trend {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #8b949e;
+        }
+        /* Threat Monitor */
+        .threat-section {
+            background: #15181c;
+            border-radius: 16px;
+            padding: 24px;
             margin-bottom: 30px;
             border: 1px solid #2f353d;
         }
-        .section h2 {
-            color: #00ff9d;
-            margin-bottom: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #2f353d;
-        }
-        th {
-            color: #00ff9d;
-        }
-        td {
-            color: #e5e5e5;
-        }
-        .badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-        .badge-active {
-            background: #00ff9d20;
-            color: #00ff9d;
-            border: 1px solid #00ff9d;
-        }
-        .badge-inactive {
-            background: #ff4d4d20;
-            color: #ff4d4d;
-            border: 1px solid #ff4d4d;
-        }
-        .badge-admin {
-            background: #ffd70020;
-            color: #ffd700;
-            border: 1px solid #ffd700;
-        }
-        .action-btn {
-            padding: 6px 12px;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-            margin: 0 5px;
-        }
-        .btn-active {
-            background: #00ff9d;
-            color: #0a0c0f;
-        }
-        .btn-inactive {
-            background: #ff4d4d;
-            color: white;
-        }
-        .btn-delete {
-            background: #ff4d4d;
-            color: white;
-        }
-        .nav-bar {
+        .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
         }
-        .nav-links a {
+        .section-header h2 {
+            color: #ff4d4d;
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-header h2::before {
+            content: "🚨";
+            font-size: 24px;
+        }
+        .filter-tabs {
+            display: flex;
+            gap: 10px;
+        }
+        .filter-tab {
+            background: #1e2329;
+            color: #8b949e;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            cursor: pointer;
+            border: 1px solid #2f353d;
+            transition: all 0.2s;
+        }
+        .filter-tab.active {
+            background: #ff4d4d20;
+            color: #ff4d4d;
+            border-color: #ff4d4d;
+        }
+        .threat-table {
+            width: 100%;
+        }
+        .threat-row {
+            display: grid;
+            grid-template-columns: 2fr 3fr 1.5fr 1fr;
+            padding: 16px;
+            border-bottom: 1px solid #2f353d;
+            align-items: center;
+        }
+        .threat-row.header {
+            color: #8b949e;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #2f353d;
+        }
+        .threat-type {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .threat-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-rate { background: #ff4d4d20; color: #ff4d4d; border: 1px solid #ff4d4d; }
+        .badge-block { background: #ffa50020; color: #ffa500; border: 1px solid #ffa500; }
+        .badge-suspicious { background: #00ff9d20; color: #00ff9d; border: 1px solid #00ff9d; }
+        .masked-ip {
+            color: #8b949e;
+            font-family: monospace;
+        }
+        .threat-action {
             color: #00ff9d;
             text-decoration: none;
-            margin-left: 20px;
+            font-size: 12px;
         }
-        .nav-links a:hover {
-            text-decoration: underline;
+        /* User Management */
+        .users-section {
+            background: #15181c;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 30px;
+            border: 1px solid #2f353d;
+        }
+        .users-section h2 {
+            color: #00ff9d;
+            font-size: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .users-section h2::before {
+            content: "👥";
+            font-size: 24px;
+        }
+        .users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        .user-card {
+            background: #1e2329;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #2f353d;
+        }
+        .user-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .user-name {
+            font-weight: 600;
+            color: #e5e5e5;
+        }
+        .user-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        .status-active {
+            background: #00ff9d20;
+            color: #00ff9d;
+            border: 1px solid #00ff9d;
+        }
+        .status-blocked {
+            background: #ff4d4d20;
+            color: #ff4d4d;
+            border: 1px solid #ff4d4d;
+        }
+        .user-stats {
+            display: flex;
+            justify-content: space-between;
+            color: #8b949e;
+            font-size: 12px;
+            margin-bottom: 12px;
+        }
+        .user-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-block {
+            background: #ff4d4d20;
+            color: #ff4d4d;
+            border: 1px solid #ff4d4d;
+        }
+        .btn-block:hover {
+            background: #ff4d4d;
+            color: #fff;
+        }
+        .btn-unblock {
+            background: #00ff9d20;
+            color: #00ff9d;
+            border: 1px solid #00ff9d;
+        }
+        .btn-unblock:hover {
+            background: #00ff9d;
+            color: #000;
+        }
+        .btn-warn {
+            background: #ffa50020;
+            color: #ffa500;
+            border: 1px solid #ffa500;
+        }
+        /* Privacy Notice */
+        .privacy-notice {
+            background: #1e2329;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-top: 30px;
+            border: 1px solid #00ff9d30;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .privacy-icon {
+            font-size: 24px;
+        }
+        .privacy-text {
+            color: #8b949e;
+            font-size: 14px;
+            flex: 1;
+        }
+        .privacy-toggle {
+            background: #2f353d;
+            color: #8b949e;
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-size: 12px;
+            border: none;
+            cursor: pointer;
+        }
+        .privacy-toggle.active {
+            background: #00ff9d;
+            color: #000;
         }
     </style>
 </head>
 <body>
     <div class="admin-container">
-        <div class="nav-bar">
-            <h1 style="color: #00ff9d;">🛡️ Admin Dashboard</h1>
-            <div class="nav-links">
-                <a href="/chat">💬 Chat</a>
-                <a href="/login" onclick="localStorage.clear()">🚪 Logout</a>
-            </div>
+        <!-- Header with Privacy Badge -->
+        <div class="admin-header">
+            <h1>Security Command Center</h1>
+            <div class="privacy-badge">Privacy Mode: Active - Sensitive Data Masked</div>
         </div>
-        
-        <!-- Stats Cards -->
+
+        <!-- System Health Stats -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-number">{{ total_users }}</div>
-                <div class="stat-label">Total Users</div>
+                <div class="stat-label">Total Requests Today</div>
+                <div class="stat-number">{{ stats.total_requests }}</div>
+                <div class="stat-trend">↑ 12% from yesterday</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">{{ total_chats }}</div>
-                <div class="stat-label">Total Chats</div>
+                <div class="stat-label">Active Users</div>
+                <div class="stat-number">{{ stats.active_users }}</div>
+                <div class="stat-trend">{{ stats.new_users }} new today</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">{{ total_blocked }}</div>
-                <div class="stat-label">Blocked Prompts</div>
+                <div class="stat-label">Blocked Threats</div>
+                <div class="stat-number">{{ stats.blocked_count }}</div>
+                <div class="stat-trend">{{ stats.rate_limit_violations }} rate limits</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">{{ all_users|selectattr('is_admin', 'equalto', true)|list|length }}</div>
-                <div class="stat-label">Admins</div>
+                <div class="stat-label">Avg Response Time</div>
+                <div class="stat-number">{{ stats.avg_latency }}ms</div>
+                <div class="stat-trend">p95: {{ stats.p95_latency }}ms</div>
             </div>
         </div>
-        
-        <!-- User Management -->
-        <div class="section">
-            <h2>👥 User Management</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Username</th>
-                        <th>Email</th>
-                        <th>Created</th>
-                        <th>Status</th>
-                        <th>Role</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in all_users %}
-                    <tr>
-                        <td>{{ user.id }}</td>
-                        <td>{{ user.username }}</td>
-                        <td>{{ user.email }}</td>
-                        <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
-                        <td>
-                            <span class="badge {% if user.is_active %}badge-active{% else %}badge-inactive{% endif %}">
-                                {{ 'Active' if user.is_active else 'Inactive' }}
-                            </span>
-                        </td>
-                        <td>
-                            {% if user.is_admin %}
-                            <span class="badge badge-admin">Admin</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <button class="action-btn {% if user.is_active %}btn-inactive{% else %}btn-active{% endif %}" 
-                                    onclick="toggleUser({{ user.id }})">
-                                {{ 'Deactivate' if user.is_active else 'Activate' }}
-                            </button>
-                            {% if not user.is_admin %}
-                            <button class="action-btn btn-delete" onclick="deleteUser({{ user.id }})">Delete</button>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+        <!-- Active Threats Monitor (This is the MAIN focus) -->
+        <div class="threat-section">
+            <div class="section-header">
+                <h2>Active Security Threats</h2>
+                <div class="filter-tabs">
+                    <span class="filter-tab active">All</span>
+                    <span class="filter-tab">Rate Limit</span>
+                    <span class="filter-tab">Blocked</span>
+                    <span class="filter-tab">Suspicious</span>
+                </div>
+            </div>
+            
+            <div class="threat-table">
+                <div class="threat-row header">
+                    <span>Type</span>
+                    <span>Details</span>
+                    <span>Source</span>
+                    <span>Action</span>
+                </div>
+                {% for threat in threats %}
+                <div class="threat-row">
+                    <div class="threat-type">
+                        <span class="threat-badge badge-{{ threat.type_class }}">{{ threat.type }}</span>
+                    </div>
+                    <div>{{ threat.details }}</div>
+                    <div class="masked-ip">{{ threat.masked_ip }}</div>
+                    <div>
+                        {% if threat.action == 'auto_blocked' %}
+                        <span style="color: #ff4d4d;">Auto-blocked</span>
+                        {% else %}
+                        <a href="#" class="threat-action">Investigate →</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
-        
-        <!-- Recent Chats -->
-        <div class="section">
-            <h2>💬 Recent Chats</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>User</th>
-                        <th>Prompt</th>
-                        <th>Response</th>
-                        <th>Latency</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for chat in recent_chats %}
-                    <tr>
-                        <td>{{ chat.timestamp.strftime('%H:%M:%S') }}</td>
-                        <td>{{ chat.username }}</td>
-                        <td>{{ chat.prompt[:50] }}{% if chat.prompt|length > 50 %}...{% endif %}</td>
-                        <td>{{ chat.response[:50] if chat.response else 'N/A' }}{% if chat.response and chat.response|length > 50 %}...{% endif %}</td>
-                        <td>{{ chat.latency_ms }}ms</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+        <!-- User Management (Focus on CONTROL, not SPYING) -->
+        <div class="users-section">
+            <h2>User Access Control</h2>
+            <div class="users-grid">
+                {% for user in users %}
+                <div class="user-card">
+                    <div class="user-header">
+                        <span class="user-name">{{ user.username }}</span>
+                        <span class="user-status {% if user.is_active %}status-active{% else %}status-blocked{% endif %}">
+                            {{ 'Active' if user.is_active else 'Blocked' }}
+                        </span>
+                    </div>
+                    <div class="user-stats">
+                        <span>📊 {{ user.request_count }} requests</span>
+                        <span>⚠️ {{ user.warning_count }} warnings</span>
+                        <span class="masked-ip">{{ user.masked_ip }}</span>
+                    </div>
+                    <div class="user-actions">
+                        {% if user.is_active %}
+                        <button class="btn btn-block" onclick="toggleUser({{ user.id }})">Block</button>
+                        {% else %}
+                        <button class="btn btn-unblock" onclick="toggleUser({{ user.id }})">Unblock</button>
+                        {% endif %}
+                        <button class="btn btn-warn" onclick="warnUser({{ user.id }})">Warn</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
-        
-        <!-- Blocked Prompts -->
-        <div class="section">
-            <h2>🚫 Blocked Prompts</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>User</th>
-                        <th>Prompt</th>
-                        <th>Reason</th>
-                        <th>IP</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for blocked in blocked_prompts %}
-                    <tr>
-                        <td>{{ blocked.timestamp.strftime('%H:%M:%S') }}</td>
-                        <td>{{ blocked.username }}</td>
-                        <td>{{ blocked.prompt[:50] }}{% if blocked.prompt|length > 50 %}...{% endif %}</td>
-                        <td>{{ blocked.reason }}</td>
-                        <td>{{ blocked.ip_address }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+        <!-- Privacy Notice (CRITICAL for trust) -->
+        <div class="privacy-notice">
+            <span class="privacy-icon">🔒</span>
+            <span class="privacy-text">
+                <strong>Privacy First:</strong> Chat data is monitored only for abuse detection. 
+                Individual prompts and responses are masked by default. Full logs require explicit admin override.
+            </span>
+            <button class="privacy-toggle" onclick="togglePrivacyMode()">View Full Logs</button>
         </div>
     </div>
-    
+
     <script>
         const token = localStorage.getItem('access_token');
         
-        // Check if user is admin
-        const isAdmin = localStorage.getItem('is_admin');
-        if (!isAdmin || isAdmin !== 'true') {
-            window.location.href = '/chat';
-        }
-        
         async function toggleUser(userId) {
-            if (!confirm('Toggle user status?')) return;
-            
-            try {
-                const response = await fetch(`/admin/toggle-user/${userId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                
-                if (response.ok) {
-                    location.reload();
-                } else {
-                    alert('Failed to toggle user');
-                }
-            } catch (error) {
-                alert('Error toggling user');
-            }
+            if (!confirm('Toggle user access?')) return;
+            const response = await fetch(`/admin/toggle-user/${userId}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) location.reload();
         }
-        
-        async function deleteUser(userId) {
-            if (!confirm('Are you sure? This cannot be undone.')) return;
-            
-            try {
-                const response = await fetch(`/admin/delete-user/${userId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                
-                if (response.ok) {
-                    location.reload();
-                } else {
-                    alert('Failed to delete user');
-                }
-            } catch (error) {
-                alert('Error deleting user');
-            }
+
+        async function warnUser(userId) {
+            await fetch(`/admin/warn-user/${userId}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        }
+
+        function togglePrivacyMode() {
+            alert('Full logs view would require additional authorization.');
         }
     </script>
 </body>

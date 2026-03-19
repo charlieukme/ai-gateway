@@ -45,8 +45,7 @@ class InputValidator:
 
 class IPBlacklister:
     def __init__(self):
-        self.max_failures = 10           # Increased from 5 to 10
-        self.blacklist_duration = 1      # Reduced from 24 hours to 1 hour
+        self.max_failures = 10  # Increased from 5 to 10
         self.temp_blacklist = {}
         self.permanent_blacklist = set()
     
@@ -56,7 +55,7 @@ class IPBlacklister:
             self.temp_blacklist[ip] = [1, now]
         else:
             fail_count, first_fail = self.temp_blacklist[ip]
-            if now - first_fail > timedelta(hours=24):
+            if now - first_fail > timedelta(hours=1):  # Reduced from 24 to 1 hour
                 self.temp_blacklist[ip] = [1, now]
             else:
                 fail_count += 1
@@ -73,7 +72,7 @@ class IPBlacklister:
         if ip in self.temp_blacklist:
             fail_count, first_fail = self.temp_blacklist[ip]
             now = datetime.utcnow()
-            if now - first_fail <= timedelta(hours=24):
+            if now - first_fail <= timedelta(hours=1):
                 return False, f"IP temporarily blocked"
             else:
                 del self.temp_blacklist[ip]
@@ -104,6 +103,7 @@ class AuditLogger:
         db.commit()
     
     def log_blocked_prompt(self, db: Session, user_id: int, username: str, prompt: str, reason: str, ip: str):
+        # Log but don't store full prompt in audit
         audit = models.AuditLog(
             action="blocked_prompt",
             user_id=user_id,
@@ -121,6 +121,16 @@ class AuditLogger:
             success=False,
             ip_address=ip,
             details=f"{error_type}: {details}"
+        )
+        db.add(audit)
+        db.commit()
+    
+    def log_admin_action(self, db: Session, admin_id: int, action: str, details: str):
+        audit = models.AuditLog(
+            action=f"admin_{action}",
+            user_id=admin_id,
+            success=True,
+            details=details
         )
         db.add(audit)
         db.commit()
